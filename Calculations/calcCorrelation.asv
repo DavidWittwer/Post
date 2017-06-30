@@ -1,0 +1,67 @@
+function corr  = calcCorrelation( ant1, ant2, outDir )
+%CALCORRELATION Summary of this function goes here
+%   Detailed explanation goes here
+
+
+% Antenna Cell Format  
+%  { 1=Costants 2=ProductModelName 3=MeasDate 4=DataPath 5=S11 
+%    6=freq 
+%    7=CPgain 8=XPgain
+%    9=CPphase 10=XPphase 11=Totgain }
+freq = ant1{6};
+
+startDIR = pwd;
+
+% Process optional passed arguements
+if( exist('outDir', 'var') )
+    DataPath = outDir;
+else
+    DataPath = uigetdir(pwd,'Select output data directory');
+end
+cd(DataPath);
+
+%% Compute the correlation
+%- Determine the number of frequeny points
+nfreq = size(freq,1);
+
+% - For each frequency point
+corr = zeros(nfreq,2);
+for k = 1 : nfreq
+    g1The_dB = ant1{7}(:,:,k);  g1The_deg = ant1{9}(:,:,k);
+    g1Phi_dB = ant1{8}(:,:,k);  g1Phi_deg = ant1{10}(:,:,k);
+
+    g1The = MagPha2Cmplx( g1The_dB, g1The_deg );
+    g1Phi = MagPha2Cmplx( g1Phi_dB, g1Phi_deg );
+
+    g2The_dB = ant2{7}(:,:,k);  g2The_deg = ant2{9}(:,:,k);
+    g2Phi_dB = ant2{8}(:,:,k);  g2Phi_deg = ant2{10}(:,:,k);
+
+    g2The = MagPha2Cmplx( g2The_dB, g2The_deg );
+    g2Phi = MagPha2Cmplx( g2Phi_dB, g2Phi_deg );
+    
+    corr(k,1) = freq(k) / 1e6;
+    corr(k,2) = correlation( g1The, g1Phi, g2The, g2Phi );
+    disp(sprintf('... correlation @ %5.1fMHz = %8.5f',corr(k,1),corr(k,2)));
+end
+
+corr = sort(corr,1);
+
+%% Create a directory to store the efficiency in (if it doesn't already
+%- exist)
+
+directory = dir(DataPath);
+if( 0 == size(directory,1) )
+    mkdir(DataPath)
+end
+
+cd(DataPath);
+
+fid = fopen('Correlation.csv','wt');
+% Write file header
+fprintf(fid,'Freq / MHz, Correlation (lin)\n'); 
+for j = 1 : nfreq
+    fprintf(fid,'%6.1f, %8.6f \n', coor(j,1), corr(j,2) );
+end
+fclose(fid);
+
+cd(startDIR);

@@ -1,0 +1,38 @@
+function [maxGainVal, iThe, iPhi] = FindPatternMaxGainValue( gain, theta, phi, dThe, dPhi)
+%PLOT3D_WITH_PLANETFILECUTS Summary of this function goes here
+%   Detailed explanation goes here
+
+
+%=========================================================================
+%  Define local variables
+%-------------------------------------------------------------------------
+DEBUG = 1;  % { 0 = no | 1 = yes }
+iThe = 0;
+iPhi = 0;
+maxGainVal = 0;
+useDefinedCutPlane = false;
+
+%=========================================================================
+%  Process optional passed arguements.  Determine the index of the peak.
+%-------------------------------------------------------------------------
+if( exist('theta','var') && exist('phi','var') && exist('dThe','var') && exist('dPhi','var') )
+    iThe = theta/dThe + 1;
+    iPhi = phi/dPhi + 1;
+    useDefinedCutPlane = true;
+else
+    [maxGainVal idx] = max( gain(:) );
+    [iThe iPhi] = ind2sub(size(gain),idx);
+end
+
+%=========================================================================
+%  Find the peak gain and in its defined cut plane if useDefinedCutPlane = true.
+%-------------------------------------------------------------------------
+if( useDefinedCutPlane )
+    maxValTheta = max( gain(:,iPhi) );
+    maxValPhi   = max( gain(iThe,:) );
+    maxGainVal = max(maxValTheta, maxValPhi);
+end
+
+if(DEBUG)
+    disp(sprintf('FindPatternMaxGainValue:  Peak gain = ',maxGainVal,iTheta,iPhi));
+end

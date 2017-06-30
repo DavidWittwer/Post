@@ -1,0 +1,37 @@
+function main2DPlotOutput(hObject, eventdata, handles)
+
+    plotProperty = plotProperties( handles.DataPath );
+
+    %% Plot azimuth pattern
+    angle = str2double(get(handles.txtTheta,'String'));
+    if( get(handles.cbPlotSlantPolarizations,'Value') ) 
+        plotProperty.copol_label = 'E_{+45} (CoPol) Component';
+        plotProperty.xpol_label = 'E_{-45} (XPol) Component';
+        
+        [ CP XP TOT ] = scaleForPlotting( handles.CPgainslant, handles.XPgainslant, handles.Totgainslant, plotProperty );
+        
+        disp(sprintf('Plotting azimuth cuts ...'));
+        nsiPlotAzimuth( handles.freq, CP, XP, TOT, plotProperty, handles.DataPath, angle );
+
+        disp(sprintf('Plotting elevation cuts ...'));
+        nsiPlotElevation( handles.freq, CP, XP, TOT, plotProperty, handles.DataPath, angle );
+
+    else
+        [ CP XP TOT ] = scaleForPlotting( handles.CPgain, handles.XPgain, handles.Totgain, handles.plotProperty );
+
+        disp(sprintf('Plotting azimuth cuts ...'));
+        nsiPlotAzimuth( handles.freq, CP, XP, TOT, plotProperty, handles.DataPath, angle );
+
+        disp(sprintf('Plotting elevation cuts ...'));
+        nsiPlotElevation( handles.freq, CP, XP, TOT, plotProperty, handles.DataPath, angle );
+
+    end
+
+    %% Plot elevation patterns
+    disp(sprintf('Plotting elevation cuts ...'));
+    angle = str2double(get(handles.txtPhi,'String'));
+    if( get(handles.cbPlotSlantPolarizations,'Value') ) 
+    else
+    end
+    
+return;

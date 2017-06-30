@@ -1,0 +1,176 @@
+function [ success ] = CreateGeoPlanFiles_v5( DataPath, freq, gain, plotSlantPolarization, invThe, SwapVH, Date, constants, prodName, THETA, PHI )
+%CREATEGEOPLANFILES_V5 Summary of this function goes here
+%   Detailed explanation goes here
+DEBUG = 1;  % { 0 = no | 1 = yes }
+success = false;
+%nsiConstant = nsiConstants();
+
+%% Process optional passed arguements
+plotSlantPol = 0;
+if( exist('plotSlantPolarization', 'var') )
+    plotSlantPol = plotSlantPolarization;
+end
+
+invertThe = 0;
+if( exist('invThe','var') )
+    invertThe = invThe;
+end
+
+swapVH = 0;
+if( exist('SwapVH','var') )
+    swapVH = SwapVH;
+end
+
+theta_ = 0;
+useTheta = false;
+if( exist('THETA','var') )
+    theta_ = THETA;
+    useTheta = true;
+end
+
+phi_ = 0;
+usePhi = false;
+if( exist('PHI','var') )
+    phi_ = PHI;
+    usePhi = true;
+end
+
+useThetaPhi = false;
+if( useTheta && usePhi )
+    useThetaPhi = true;
+end
+
+thetaOffset = 90;
+
+%% Find the maximum gain values for every frequency
+numbeam1 = size(freq,1);
+dPhi = constants.FF_dPHI;
+dThe = constants.FF_dTH;
+nPhi = constants.FF_nPHI;
+
+%% Create a directory to store the GeoPlan files in (if it doesn't already
+% exist)
+cd(DataPath);
+
+directory = dir('GeoPlanFile*');
+if( 0 == size(directory,1) )
+    mkdir('GeoPlanFiles')
+end
+
+cd('GeoPlanFiles');
+
+
+%% Augment user supplied antenna details 
+label = getProductInfo(prodName);
+label.Date_Measured = Date;
+label.Lower_Freq = freq(1)/1e6;
+label.Upper_Freq = freq(numbeam1)/1e6;
+
+%% For each frequency, create a separate GeoPlan file
+for i=1:numbeam1
+    
+    if(DEBUG) 
+        display(sprintf('Writing GeoPlan frequency %i of %i.',i,numbeam1));
+    end
+        
+    % Extract the pattern to work on
+    tmp_gain = gain(:,:,i);
+    %size(tmp_gain)
+
+    %  Perform data rotations first!!
+    if( invertThe )
+        tmp_gain = flipud(tmp_gain);
+    end
+        
+    % Find the location of the peak gain
+    if( useThetaPhi )
+        iThe = theta_/dThe + 1;
+        iPhi = phi_/dPhi + 1;
+    else
+        [maxGainVal idx] = max( tmp_gain(:) );
+        [iThe iPhi] = ind2sub(size(tmp_gain),idx);
+    end
+
+    % Convert to GeoPlan file scaling (dBd)
+    az_data = tmp_gain(iThe,1:end-1)' - 2.14;
+    iPhiDeg = (iPhi-1) * dPhi;
+    az_data = circshift(az_data,-iPhiDeg);
+    
+    % Elevation data
+    % -- grab the first half of the data @ 0 deg
+    data1 = tmp_gain(:,iPhi);
+    
+    % -- grab the second half of the data @ 180 deg
+    iiPhi = mod(iPhi+180,361);
+    data2 = tmp_gain(:,iiPhi);
+    
+    % Concatenate the two parts, omitting the last point of each half.
+    % Convert to GeoPlan file scaling (dBd)
+    el_data = [ data1(1:end-1); flipud(data2(2:end)) ] - 2.14;
+    el_data = circshift(el_data,-thetaOffset);
+    
+    % Swap Vertical and Horizontal cuts if requested by the user
+    if(swapVH)
+        tmp = az_data;
+        az_data = el_data;
+        el_data = tmp;
+    end
+ 
+    % Create file name
+    %[pathstr, name] = fileparts(DataPath); 
+    name = [ label.Manufacturer, '_', label.ModelName ];
+    fName = [ name, '_', num2str(ceil(freq(i)/1e6)), '_MHz' , '.vwa' ];
+    fName = strrep(fName,' ','_');              % replace spaces with _
+    fName = strrep(fName,'_MLdata','');         % remove text from name
+    
+    % Open new GeoPlan file
+    fid = fopen(fName,'wt');
+
+    % Write header to file
+    label.Freq_Measured = freq(i)/1e6;
+
+    fprintf(fid,'VERIZON WIRELESS RFTOOLS ANTENNA\n');
+    fprintf(fid,'V5\n');
+    fprintf(fid,'model_name:\t%s\n', label.ModelName );
+    fprintf(fid,'manufacturer:\t%s\n', label.Manufacturer );
+    fprintf(fid,'description:\t%s\n', label.Description );
+    fprintf(fid,'antenna_type:\t%i\n', label.Antenna_Type ); 
+    fprintf(fid,'polarization:\t%i\n', label.Polarization );
+    fprintf(fid,'date_measured:\t%s\n', datestr(label.Date_Measured,2) );
+    fprintf(fid,'freq_measured_mhz:\t%i\n', label.Freq_Measured );
+    fprintf(fid,'lower_freq_mhz:\t%i\n', label.Lower_Freq );
+    fprintf(fid,'upper_freq_mhz:\t%i\n', label.Upper_Freq );
+    fprintf(fid,'electrical_tilt:\t%2.1f\n', label.Electrical_Tilt );
+    fprintf(fid,'height_m:\t%s\n', label.Height_m );
+    fprintf(fid,'width_m:\t%s\n', label.Width_m );
+    fprintf(fid,'depth_m:\t%s\n', label.Depth_m );
+    fprintf(fid,'weight_kg:\t%s\n', label.Weight_kg );
+
+    % Write azimuth cut
+    fprintf(fid,'HORIZONTAL_GAINS\n');
+    for j = 1 : size(az_data,1)
+        fprintf(fid,'%i\t%5.3f\n', j-1, az_data(j) ); 
+    end
+    fprintf(fid,'END\n');
+    
+    % Write elevation cut
+    % Elevation cuts are created from two columns of the matrix.  The first
+    % column must include the maximum value.  The second column is its
+    % compliment.
+    fprintf(fid,'VERTICAL_GAINS\n');
+    % Output the pattern data
+    for j = 1 : size(el_data,1)
+        fprintf(fid,'%i\t%5.3f\n', j-1, el_data(j) ); 
+    end
+    fprintf(fid,'END\n');
+    
+    % Close the current file
+    fclose(fid);
+    
+end
+%% Return to previous directory
+cd('..');
+success = true;
+
+return;
+

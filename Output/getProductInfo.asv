@@ -1,0 +1,258 @@
+function [ label, product_list ] = getProductInfo( product_name )
+%GETPRODUCTINFO Summary of this function goes here
+%   Detailed explanation goes here
+
+label.Manufacturer = 'Galtronics';
+label.Date_Measured = '';
+label.Freq_Measured = 0.0; 
+label.Lower_Freq = 0.0;
+label.Upper_Freq = 0.0;
+label.Electrical_Tilt = 0.0;
+
+%disp(sprintf('Looking up info on product = %s\n',product_name));
+
+product_list{1}  = 'D5501';
+product_list{2}  = 'M4772';
+product_list{3}  = 'M4936';
+product_list{4}  = 'M5277';
+product_list{5}  = 'S4935';
+product_list{6}  = 'S5379';
+product_list{7}  = 'S5491';
+product_list{8}  = 'T5545';
+product_list{9}  = 'D5777';
+product_list{10} = 'T4774';
+product_list{11} = 'P4774';
+product_list{12} = 'T5622';
+product_list{13} = 'P5622';
+product_list{14} = 'P4912';
+product_list{15} = 'M5859';
+product_list{16} = 'Alpha';
+product_list{17} = 'CCI';
+product_list{18} = 'KMW_LowGain';
+product_list{19} = 'KMW_HighGain';
+product_list{20} = 'Generic';
+
+% Antenna Type { 0=unknown | 1=Colinear | 2=Corner Reflector | 3=Dual Skirt Dipole | % 4=Log Periodic | 5=Microcell | 6=Omni | 7=Panel | 8=Yagi | 9=Switched Beam }
+% Polarization { 0=unknown | 1=Horizontal | 2=Vertical | 3=Cross Polarity
+% (-45/+45 degrees) | 4=Cross Polarity (0/90 degrees) | 5=Circular }
+switch lower(product_name)
+    case {'m5859'}
+        label.ModelName = 'PEAR M5859i';
+        label.Description = '4x4 MIMO Small Form Factor In-Building Antenna';
+        label.Part_Number = '0xxxxxxx-058591';
+        label.Antenna_Type = 6;
+        label.Polarization = 2;
+        label.Height_m = 0.072;
+        label.Width_m = 0.208;
+        label.Depth_m = 0.208;
+        label.Weight_kg = 0.43;        
+    case {'d5501'}
+        label.ModelName = 'EXTENT D5501i';
+        label.Description = 'Narrow (30/60) Beamwidth MIMO Panel Antenna';
+        label.Part_Number = '04119261-05631-1';
+        label.Antenna_Type = 7;
+        label.Polarization = 3;
+        label.Height_m = 0.367;
+        label.Width_m = 0.627;
+        label.Depth_m = 0.133;
+        label.Weight_kg = 4.8;        
+    case {'m4772'}
+        label.ModelName = 'M4772';
+        label.Description = 'Dual Polarization MIMO In-Building Antenna';
+        label.Part_Number = '02108261-04772';
+        label.Antenna_Type = 6;
+        label.Polarization = 4;
+        label.Height_m = 0.118;
+        label.Width_m = 0.406;
+        label.Depth_m = 0.406;
+        label.Weight_kg = 1.25;
+    case {'m4936'}
+        label.ModelName = 'M4936';
+        label.Description = 'Broadband Dual Polarized MIMO In-Building Antenna';
+        label.Part_Number = '02121261-04936U';
+        label.Antenna_Type = 6;
+        label.Polarization = 4;
+        label.Height_m = 0.118;
+        label.Width_m = 0.406;
+        label.Depth_m = 0.406;
+        label.Weight_kg = 1.43;
+    case {'m5277'}
+        label.ModelName = 'M5277';
+        label.Description = 'Outdoor/In-Building Directional Antenna';
+        label.Part_Number = 'xxxxxxxx-05277';
+        label.Antenna_Type = 7;
+        label.Polarization = 3;
+        label.Height_m = 0.256;
+        label.Width_m = 0.200;
+        label.Depth_m = 0.065;
+        label.Weight_kg = 0.75;
+    case {'s4935'}
+        label.ModelName = 'S4935';
+        label.Description = 'Broadband In-Building Antenna';
+        label.Part_Number = '02108269-04935U';
+        label.Antenna_Type = 6;
+        label.Polarization = 2;
+        label.Height_m = 0.335;
+        label.Width_m = 0.335;
+        label.Depth_m = 0.124;
+        label.Weight_kg = 0.75;
+    case {'s5379'}
+        label.ModelName = 'S5379';
+        label.Description = 'Small Form-Factor In-Building Antenna';
+        label.Part_Number = '02108270-05379';
+        label.Antenna_Type = 6;
+        label.Polarization = 2;
+        label.Height_m = 0.204;
+        label.Width_m = 0.204;
+        label.Depth_m = 0.082;
+        label.Weight_kg = 0.390;
+    case {'s5491'}
+        label.ModelName = 'S5491';
+        label.Description = 'Public Safety In-Building Antenna';
+        label.Part_Number = '02108304-05491';
+        label.Antenna_Type = 6;
+        label.Polarization = 2;
+        label.Height_m = 0.335;
+        label.Width_m = 0.335;
+        label.Depth_m = 0.124;
+        label.Weight_kg = 0.75;
+    case {'t5545'}
+        label.ModelName = 'T5545';
+        label.Description = 'Tri-Sector Outdoor DAS Antenna';
+        label.Part_Number = '04119261-05545';
+        label.Antenna_Type = 5;
+        label.Polarization = 3;
+        label.Height_m = 0.370;
+        label.Width_m = 0.370;
+        label.Depth_m = 0.611;
+        label.Weight_kg = 12.0;
+    case {'d5777'}
+        label.ModelName = 'D5777';
+        label.Description = 'EXTENT D5777i 30/30 Narrow Beam Panel Antenna';
+        label.Part_Number = '04108261-05777-1';
+        label.Antenna_Type = 7;
+        label.Polarization = 3;
+        label.Height_m = 0.155;
+        label.Width_m = 0.627;
+        label.Depth_m = 0.155;
+        label.Weight_kg = 12.0;
+    case { 't4774' }
+        label.ModelName = 'T4774';
+        label.Description = 'Tri-Sector Outdoor DAS Antenna (1710-2170MHz, 2300-2700MHz)';
+        label.Part_Number = '04108262-04774';
+        label.Antenna_Type = 5;
+        label.Polarization = 3;
+        label.Height_m = 0.609;
+        label.Width_m = 0.200;
+        label.Depth_m = 0.200;
+        label.Weight_kg = 10.00;
+    case { 'p4774' }
+        label.ModelName = 'P4774';
+        label.Description = 'Pseudo-Omni Outdoor DAS Antenna (1710-2170MHz, 2300-2700MHz)';
+        label.Part_Number = '04108262-04774';
+        label.Antenna_Type = 5;
+        label.Polarization = 3;
+        label.Height_m = 0.609;
+        label.Width_m = 0.200;
+        label.Depth_m = 0.200;
+        label.Weight_kg = 10.00;
+    case { 't5622' }
+        label.ModelName = 'T5622';
+        label.Description = 'Tri-Sector Outdoor DAS Antenna (698-960MHz, 1710-2700MHz)';
+        label.Part_Number = '04119261-05622-1';
+        label.Antenna_Type = 6;
+        label.Polarization = 3;
+        label.Height_m = 0.611;
+        label.Width_m = 0.370;
+        label.Depth_m = 0.370;
+        label.Weight_kg = 13.1;
+    case { 'p5622' }
+        label.ModelName = 'P5622';
+        label.Description = 'Pseudo Omni Outdoor DAS Antenna (698-960MHz, 1710-2700MHz)';
+        label.Part_Number = '04119261-05818-1';
+        label.Antenna_Type = 5;
+        label.Polarization = 3;
+        label.Height_m = 0.611;
+        label.Width_m = 0.370;
+        label.Depth_m = 0.370;
+        label.Weight_kg = 13.1;
+    case { 'p4912' }
+        label.ModelName = 'P4912';
+        label.Description = '1710-2700MHz)';
+        label.Part_Number = '04119264-04912';
+        label.Antenna_Type = 5;
+        label.Polarization = 3;
+        label.Height_m = 1.240;
+        label.Width_m = 0.203;
+        label.Depth_m = 0.203;
+        label.Weight_kg = 11.0;
+    case {'alpha'}
+        label.Manufacturer = 'Alpha';
+        label.ModelName = 'AW3398-T4';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+    case {'cci'}
+        label.Manufacturer = 'CCI';
+        label.ModelName = 'SCA-OM-360F-PQ-H2S';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+    case {'kmw_lowgain'}
+        label.Manufacturer = 'KMW';
+        label.ModelName = 'FX-X-WM-360-4-00T-ST';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+    case {'kmw_highgain'}
+        label.Manufacturer = 'KMW';
+        label.ModelName = 'FX-X-WM-360-7-00T-ST';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+    case {'generic'}
+        label.Manufacturer = '';
+        label.ModelName = 'Generic';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+    case {'default', ''}
+        label.ModelName = '';
+        label.Description = '';
+        label.Part_Number = '';
+        label.Antenna_Type = 0;
+        label.Polarization = 0;
+        label.Height_m = 0.0;
+        label.Width_m = 0.0;
+        label.Depth_m = 0.0;
+        label.Weight_kg = 0.0;
+end
+
+return;
+
+        

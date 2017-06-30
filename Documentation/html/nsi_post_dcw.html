@@ -1,0 +1,289 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN">
+<html xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>nsi_post_dcw</title>
+      <meta name="generator" content="MATLAB 7.5">
+      <meta name="date" content="2011-04-19">
+      <meta name="m-file" content="nsi_post_dcw"><style>
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows. */ 
+p,h1,h2,div.content div {
+  max-width: 600px;
+  /* Hack for IE6 */
+  width: auto !important; width: 600px;
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head>
+   <body>
+      <div class="content">
+         <h2>Contents</h2>
+         <div>
+            <ul>
+               <li><a href="#2">Load Data files</a></li>
+               <li><a href="#3">Compute auxillary quantities</a></li>
+               <li><a href="#4">Plot routines</a></li>
+            </ul>
+         </div><pre class="codeinput"><span class="comment">% nsi_post.m</span>
+<span class="comment">%</span>
+<span class="comment">% Post processing script for binary GTU NSI/ Howland Chamber files.  The</span>
+<span class="comment">% script imports uncorrected CoPol and XPol (dB) amplitudes for all</span>
+<span class="comment">% measured beams (frequencies).  Total Power is computed from the power sum</span>
+<span class="comment">% of the CoPol and Xpol components (convert to linear units, sum and then</span>
+<span class="comment">% convert back to dB).  The Azplot.m and Dirpolot.m script files are used (external!)</span>
+<span class="comment">% The data matrices are arranged 62x122 with the 62st and 122st columns filled</span>
+<span class="comment">% with ZEROS.  Matrix ROWS are PHI cuts (Theta held constant) while COLUMNS</span>
+<span class="comment">% are THETA cuts (phi held constant).  Theta Point Sampling 0:1:180</span>
+<span class="comment">% Phi Point Sampling 0:1:360.  First ROW corresponds to THETA=0, First Column</span>
+<span class="comment">% to PHI=0.</span>
+
+clear <span class="string">all</span>;
+close <span class="string">all</span>;
+clc;
+
+<span class="comment">% Define constants</span>
+nsiConstant = nsiConstants();
+</pre><h2>Load Data files<a name="2"></a></h2><pre class="codeinput">nsiDataPath = eval(<span class="string">'cd'</span>);
+
+<span class="comment">% Load pattern files</span>
+
+[ freq ] = nsiReadBeamList( nsiDataPath );
+
+[ S11dBmag ] = nsiReadS11File( nsiDataPath );
+
+<span class="comment">%[ CPgain, XPgain ] = nsiReadData( nsiDataPath, freq );</span>
+[ CPgain, XPgain, CPphase, XPphase ] = nsiReadAmpPhaData( nsiDataPath, freq );
+
+<span class="comment">% Compute the total gain</span>
+[ Totgain ] = nsiComputeTotalGain( CPgain, XPgain );
+
+<span class="comment">% Compute average power density</span>
+[ SavgAUT ] = nsiComputeAvePowerDensity( freq, Totgain );
+
+<span class="comment">% Load the efficiency file data</span>
+[ EffpathP1, EffnameP1, Effdata, Effcheck, errflag1 ] = nsiReadEfficiencyFile( nsiDataPath, freq, SavgAUT );
+
+<span class="comment">% Load the frequency list file</span>
+[ dBi_meas_f, SGH_NWoffset, errflag2 ] = nsiReadFreqeuncyFile( EffpathP1, EffnameP1, freq );
+
+<span class="keyword">if</span> (errflag1 || errflag2)
+    error(<span class="string">'ERROR: frequency points for AUT and the Cal Files do NOT match:  EXITING'</span>)
+<span class="keyword">end</span>
+
+
+<span class="comment">% Perform error checking between dBiCal file and SGH Cal standard</span>
+numbeam1 = size(SavgAUT,3);
+maxdBitest = ( max( max(Totgain) ) ) + reshape( SGH_NWoffset, [1,1,numbeam1] );
+maxdBitest = reshape( maxdBitest, [numbeam1 1 1] )
+<span class="comment">%above verifies that the values pulled in from dBiCal files are the</span>
+<span class="comment">%correct Network Offset adjustment values (in dB, measured from SGH Cal standards)</span>
+<span class="comment">%which need to be added to the UNnormalized Gain values (IT WORKS!!!!)</span>
+
+<span class="comment">%put SGH_NW offset values into an N-D array format for addition to</span>
+<span class="comment">%(uncorrected) CPgain, Xpgain, and totgain values</span>
+NWoffset_ND = repmat( reshape(SGH_NWoffset, [1,1,numbeam1]), [nsiConstant.FF_nTH nsiConstant.FF_nPHI 1] );
+
+<span class="comment">%Here's where we apply the NW offset to get the correct Terminal Gain</span>
+<span class="comment">% corrected into dBi values</span>
+CPgain=CPgain + NWoffset_ND;
+XPgain=XPgain + NWoffset_ND;
+Totgain=Totgain + NWoffset_ND;
+</pre><pre class="codeoutput">File C:\Documents and Settings\dwittwer\Desktop\4912 ODAS 8x48\data\20110419-GTI Prototype\4x48 AWS GTI Prototype #7 Rev 0 Port2 20110419_MLdata3912\AWS_EffCal.csv found
+
+Effcheck =
+
+   75.9492
+   75.0980
+   70.1633
+   66.0770
+   69.7410
+   67.2722
+
+
+maxdBitest =
+
+   11.0172
+   11.3306
+   11.1880
+   11.8267
+   12.2886
+   12.2939
+
+</pre><h2>Compute auxillary quantities<a name="3"></a></h2><pre class="codeinput">[ CPgainslant, XPgainslant ] = nsiComputeSlantPolarizations( CPgain, XPgain, CPphase, XPphase );
+
+<span class="comment">% Compute the total power for the two field components</span>
+<span class="comment">%[ Totgainslant ] = nsiComputeTotalGain( CPgain, XPgain );</span>
+[ Totgainslant ] = nsiComputeTotalGain( CPgainslant, XPgainslant );
+</pre><h2>Plot routines<a name="4"></a></h2><pre class="codeinput"><span class="comment">%-----------------------------------------------------------------------</span>
+<span class="comment">%PLOTTING SPECIFIC CUTS (typically, Azimuth w/ Theta=90, Elev. w/ Phi=0,</span>
+<span class="comment">%&amp; Elev. w/ Phi=90</span>
+
+plotProperty = plotProperties( nsiDataPath );
+<span class="comment">%[ CPgainplot XPgainplot Totgainplot ] = scaleForPlotting( CPgain, XPgain, Totgain, plotProperty );</span>
+<span class="comment">%nsiPlotAzimuth( freq, CPgainplot, XPgainplot, Totgainplot, plotProperty );</span>
+
+[ CPgainslantplot XPgainslantplot Totgainslantplot ] = scaleForPlotting( CPgainslant, XPgainslant, Totgainslant, plotProperty );
+nsiPlotAzimuth( freq, CPgainslantplot, XPgainslantplot, Totgainslantplot, plotProperty );
+
+<span class="comment">%nsiPlotElevation( freq, CPgainplot, XPgainplot, Totgainplot, plotProperty );</span>
+
+<span class="comment">%nsiPlotCDF( freq, Totgain, Effcheck, maxdBitest, S11dBmag, plotProperty );</span>
+
+<span class="comment">%nsiPlot3D( freq, Totgain );</span>
+</pre><pre class="codeoutput">Error using ==&gt; input
+Cannot call INPUT from EVALC.</pre><p class="footer"><br>
+            Published with MATLAB&reg; 7.5<br></p>
+      </div>
+      <!--
+##### SOURCE BEGIN #####
+% nsi_post.m
+%
+% Post processing script for binary GTU NSI/ Howland Chamber files.  The
+% script imports uncorrected CoPol and XPol (dB) amplitudes for all 
+% measured beams (frequencies).  Total Power is computed from the power sum
+% of the CoPol and Xpol components (convert to linear units, sum and then
+% convert back to dB).  The Azplot.m and Dirpolot.m script files are used (external!) 
+% The data matrices are arranged 62x122 with the 62st and 122st columns filled
+% with ZEROS.  Matrix ROWS are PHI cuts (Theta held constant) while COLUMNS
+% are THETA cuts (phi held constant).  Theta Point Sampling 0:1:180
+% Phi Point Sampling 0:1:360.  First ROW corresponds to THETA=0, First Column
+% to PHI=0.
+
+clear all;
+close all;
+clc;
+
+% Define constants
+nsiConstant = nsiConstants();
+
+%% Load Data files
+nsiDataPath = eval('cd');
+
+% Load pattern files
+
+[ freq ] = nsiReadBeamList( nsiDataPath );
+
+[ S11dBmag ] = nsiReadS11File( nsiDataPath );
+
+%[ CPgain, XPgain ] = nsiReadData( nsiDataPath, freq );
+[ CPgain, XPgain, CPphase, XPphase ] = nsiReadAmpPhaData( nsiDataPath, freq );
+   
+% Compute the total gain
+[ Totgain ] = nsiComputeTotalGain( CPgain, XPgain );
+
+% Compute average power density
+[ SavgAUT ] = nsiComputeAvePowerDensity( freq, Totgain );
+
+% Load the efficiency file data
+[ EffpathP1, EffnameP1, Effdata, Effcheck, errflag1 ] = nsiReadEfficiencyFile( nsiDataPath, freq, SavgAUT );
+
+% Load the frequency list file
+[ dBi_meas_f, SGH_NWoffset, errflag2 ] = nsiReadFreqeuncyFile( EffpathP1, EffnameP1, freq );
+
+if (errflag1 || errflag2)
+    error('ERROR: frequency points for AUT and the Cal Files do NOT match:  EXITING')
+end
+   
+
+% Perform error checking between dBiCal file and SGH Cal standard
+numbeam1 = size(SavgAUT,3);
+maxdBitest = ( max( max(Totgain) ) ) + reshape( SGH_NWoffset, [1,1,numbeam1] );
+maxdBitest = reshape( maxdBitest, [numbeam1 1 1] )
+%above verifies that the values pulled in from dBiCal files are the
+%correct Network Offset adjustment values (in dB, measured from SGH Cal standards) 
+%which need to be added to the UNnormalized Gain values (IT WORKS!!!!)
+   
+%put SGH_NW offset values into an N-D array format for addition to
+%(uncorrected) CPgain, Xpgain, and totgain values
+NWoffset_ND = repmat( reshape(SGH_NWoffset, [1,1,numbeam1]), [nsiConstant.FF_nTH nsiConstant.FF_nPHI 1] );
+   
+%Here's where we apply the NW offset to get the correct Terminal Gain
+% corrected into dBi values 
+CPgain=CPgain + NWoffset_ND;
+XPgain=XPgain + NWoffset_ND;
+Totgain=Totgain + NWoffset_ND;
+
+%% Compute auxillary quantities
+
+[ CPgainslant, XPgainslant ] = nsiComputeSlantPolarizations( CPgain, XPgain, CPphase, XPphase );
+
+% Compute the total power for the two field components
+%[ Totgainslant ] = nsiComputeTotalGain( CPgain, XPgain );
+[ Totgainslant ] = nsiComputeTotalGain( CPgainslant, XPgainslant );
+
+%% Plot routines
+%REPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASHREPLACE_WITH_DASH_DASH-
+%PLOTTING SPECIFIC CUTS (typically, Azimuth w/ Theta=90, Elev. w/ Phi=0,
+%& Elev. w/ Phi=90
+
+plotProperty = plotProperties( nsiDataPath );
+%[ CPgainplot XPgainplot Totgainplot ] = scaleForPlotting( CPgain, XPgain, Totgain, plotProperty );
+%nsiPlotAzimuth( freq, CPgainplot, XPgainplot, Totgainplot, plotProperty );
+
+[ CPgainslantplot XPgainslantplot Totgainslantplot ] = scaleForPlotting( CPgainslant, XPgainslant, Totgainslant, plotProperty );
+nsiPlotAzimuth( freq, CPgainslantplot, XPgainslantplot, Totgainslantplot, plotProperty );
+
+%nsiPlotElevation( freq, CPgainplot, XPgainplot, Totgainplot, plotProperty );
+
+%nsiPlotCDF( freq, Totgain, Effcheck, maxdBitest, S11dBmag, plotProperty );
+
+%nsiPlot3D( freq, Totgain );
+
+##### SOURCE END #####
+-->
+   </body>
+</html>

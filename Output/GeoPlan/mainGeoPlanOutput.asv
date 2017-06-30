@@ -1,0 +1,28 @@
+function mainGeoPlanOutput(hObject, eventdata, handles)
+
+    % Get user input with serparte GUI
+    prodName = GeoPlanGetInfo;
+
+    SwapVH = get(handles.cbSwapVH,'Value');
+    invThe = get(handles.cbPlanetThetaInvert,'Value');
+    
+    plotSlantPolarization = get(handles.cbPlotSlantPolarizations,'Value');
+    switch(plotSlantPolarization)
+        case true
+            data = handles.Totgainslant;
+        case false
+            data = handles.Totgain;
+    end
+    
+    switch( get(handles.cbPFuseMaxGain,'Value') )
+        case true
+            CreateGeoPlanFiles( handles.DataPath, handles.freq, data, plotSlantPolarization, invThe, SwapVH, ...
+                handles.MeasDate, handles.Constants, label );
+        case false
+            PFtheta = str2double(get(handles.tbxPFtheta,'String'));
+            PFphi   = str2double(get(handles.tbxPFphi,'String'));
+            CreateGeoPlanFiles( handles.DataPath, handles.freq, data, plotSlantPolarization, invThe, SwapVH, ...
+                handles.MeasDate, handles.Constants, label, PFtheta, PFphi );
+    end
+    
+return;

@@ -1,0 +1,151 @@
+function [ success ] = CreatePlanetFiles( DataPath, freq, gain )
+%NSICREATEPLANETFILES Summary of this function goes here
+%   Detailed explanation goes here
+
+success = false;
+nsiConstant = nsiConstants();
+numbeam1 = size(freq,1);
+DEBUG = 1;  % { 0 = no | 1 = yes }
+
+%CircShift_Ang = 90;    % Rotate pattern (used for ODAS antennas)
+CircShift_Ang = 180;    % Flip pattern (used for IDAS antennas)
+
+% 
+%Az_Ang_Th = input('Enter theta angle (deg) for planet file azimuth cut = ');
+%El_Ang_Phi = input('Enter the phi angle (deg) for the planet file elevation cut = ');
+
+% Az_Ang_vec = linspace(0,180,nsiConstant.FF_nTH);
+% [ Dummy,      Az_Ang_indx ] = min( abs(Az_Ang_vec-Az_Ang_Th) );
+% 
+% El_Ang_vec = linspace(0,360,nsiConstant.FF_nPHI);
+% [ Dummy,      El_Ang_indx ] = min( abs(El_Ang_vec-El_Ang_Phi) );
+% CEl_Ang_Phi = mod(El_Ang_Phi+180,360);
+% [ Dummy,      CEl_Ang_indx ] = min( abs(El_Ang_vec-CEl_Ang_Phi) );
+% [ Dummy,      CircShiftEl_indx ] = min( abs(El_Ang_vec-CircShift_Ang) );
+
+% Find the maximum gain values for every frequency
+maxGain = reshape( max(max(gain)), numbeam1, 1 );
+
+% Create a directory to store the Planet files in (if it doesn't already
+% exist)
+cd(DataPath);
+%if( ~exist('PlanetFiles', 'dir') ) 
+%    mkdir('PlanetFiles');
+%end
+mkdir('PlanetFiles');
+cd('PlanetFiles');
+%mkdir('PlanetFiles');
+
+% Write peak gain values to a file
+% Create file name
+[pathstr, name] = fileparts(DataPath); 
+gName = [ name, '_peak_gain.txt'];
+gName = strrep(gName,' ','_');              % replace spaces with _
+%gName = sprintf('./PlanetFiles/%s',gName);
+  
+% For each frequency, create a separate Planet file
+for i=1:numbeam1
+    % Find the peak gain and its location
+    tmp_gain = gain(:,:,i);
+    [maxGainVal idx] = max(tmp_gain(:));
+    [iThe iPhi] = ind2sub(size(tmp_gain),idx);
+
+    % Extract vertical and horizontal pattern data
+    gmaxThe = iThe * nsiConstant.FF_dTH;
+    gmaxPhi = iPhi * nsiConstant.FF_dPHI;
+    
+    az_data = abs( gain(iThe,1:end-1,i)' - maxGain(i) );
+    el_data = 
+    
+    % Create file name
+    [pathstr, name] = fileparts(DataPath); 
+    fName = [ name, '_', num2str(ceil(freq(i)/1e6)), '.txt'];
+    fName = strrep(fName,' ','_');              % replace spaces with _
+    fName = strrep(fName,'_MLdata','');         % remove text from name
+    %fName = sprintf('./PlanetFiles/%s',fName);
+    
+    
+    % Write peak gain to file
+    [fid, MESSAGE] = fopen(gName,'at');
+    fprintf(fid, '%4.0f, %6.2f\n', freq(i)/1e6, maxGain(i));
+    fclose(fid);
+    
+    % Open new planet file
+    fid = fopen(fName,'wt');
+
+    % Write header to file
+    fprintf(fid,'NAME\t%s\n', fName );
+    fprintf(fid,'MAKE\t%s\n', 'GALTRONICS' );
+    fprintf(fid,'FREQUENCY\t%4.0f\n', freq(i) / 1e6 );
+    fprintf(fid,'H_WIDTH\t%i\n', 0 );
+    fprintf(fid,'V_WIDTH\t%i\n', 0 );
+    fprintf(fid,'FRONT_TO_BACK\t%i\n', 0 );
+    fprintf(fid,'GAIN\t%6.2f dBi\n', maxGain(i) );
+    fprintf(fid,'TILT\t%s\n', 'fixed' );
+    fprintf(fid,'POLARIZATION\t%s\n', 'slant 45' );
+    %fprintf(fid,'COMMENT\t%s\n', 'preliminary' );
+    fprintf(fid,'COMMENT\tPeak Gain found at (Theta,Phi) = (%i,%i) deg\n', gmaxThe, gmaxPhi);
+    
+    if(DEBUG) 
+        %disp(sprintf('Max gain values:  %f, %f',maxGainVal,maxGain(i)));
+        disp(sprintf('Offsets (theta,phi) = (%f,%f)deg',gmaxThe,gmaxPhi));
+    end
+
+    % Write azimuth cut
+    %data = abs( gain(Az_Ang_indx,1:end-1,i)' - maxGain(i) );
+    data = abs( gain(iThe,1:end-1,i)' - maxGain(i) );
+    
+    %data = circshift(data,-CircShiftAz_indx);
+    
+    % Debug plot
+    if(DEBUG)
+        figure;
+        plot( -data );
+        hold on;
+    end
+    
+    fprintf(fid,'HORIZONTAL\t%i\n', size(data,1) );
+    for j = 1 : size(data,1)
+        fprintf(fid,'%i\t%5.3f\n', j-1, data(j) ); 
+    end
+    
+    % Write elevation cut
+    % Elevation cuts are created from two columns of the matrix.  The first
+    % column must include the maximum value.  The second column is its
+    % compliment.
+    
+    %data1 = gain(1:end-1,El_Ang_indx,i);
+    data1 = gain(1:end-1,iPhi,i);
+
+    %
+    % Causing an error below ????  !!!!!
+    %
+    iPhi2 = mod(iPhi + (nsiConstant.FF_nPHI-1)/2,nsiConstant.FF_nPHI);
+    %data2 = gain(2:end,CEl_Ang_indx,i);
+    data2 = gain(2:end,iPhi2,i);
+
+    data = abs( [ data1; flipud(data2) ] - maxGain(i) );
+    
+    %data = circshift(data,CircShiftEl_indx);
+    data = circshift(data,(nsiConstant.FF_nPHI-1)/2);
+    
+    % Debug plot
+    if(DEBUG)
+        figure;
+        plot( -data );
+    end
+    
+    data = circshift(data,CircShift_Ang);
+    fprintf(fid,'VERTICAL\t%i\n', size(data,1) );
+    % Output the pattern data
+    for j = 1 : size(data,1)
+        fprintf(fid,'%i\t%5.3f\n', j-1, data(j) ); 
+    end
+    
+    % Close the current file
+    fclose(fid);
+
+end
+
+cd('..');
+success = true;
